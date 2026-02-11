@@ -1,0 +1,163 @@
+/* style.css - лёгкий летний стиль */
+:root{
+  --bg:#fffdf8;
+  --card:#fff8e8;
+  --accent:#36b37e;
+  --muted:#9aa5a6;
+  --brown:#a36b3a;
+  --slime: rgba(86, 200, 115, 0.28);
+  --glass: rgba(255,255,255,0.6);
+  --shadow: 0 6px 18px rgba(20,20,20,0.08);
+  --map-h: 420px;
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0;
+  font-family: Inter, "Helvetica Neue", Arial, sans-serif;
+  background: linear-gradient(180deg,#e8f9ff 0%, #fffdf8 60%);
+  color:#153b2e;
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+  min-height:100vh;
+}
+
+.topbar{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:18px 24px;
+  background: linear-gradient(90deg, rgba(255,255,255,0.4), rgba(255,255,255,0.1));
+  box-shadow: var(--shadow);
+}
+.topbar h1{margin:0;font-size:18px;letter-spacing:0.2px}
+.user-panel{display:flex;align-items:center;gap:12px}
+.btn{display:inline-block;padding:8px 12px;border-radius:8px;background:linear-gradient(180deg,#1da1f2,#0b8edb);color:#fff;text-decoration:none;font-weight:600}
+.btn:hover{opacity:0.95}
+
+.container{max-width:980px;margin:24px auto;padding:0 16px}
+
+.map-card{
+  display:grid;
+  grid-template-columns: 1fr 320px;
+  gap:20px;
+  align-items:start;
+}
+
+.map{
+  background: linear-gradient(180deg,#f7fff2 0%, #e9f8ee 100%);
+  border-radius:16px;
+  padding:20px;
+  height: var(--map-h);
+  position:relative;
+  overflow:hidden;
+  box-shadow: var(--shadow);
+  border: 1px solid rgba(120,200,160,0.06);
+}
+
+/* snail */
+.snail{
+  position:absolute;
+  width:48px;
+  height:48px;
+  transform: translate(-50%,-50%) scale(1.0);
+  font-size:36px;
+  transition: transform 0.2s linear;
+  z-index: 30;
+}
+
+/* point dots */
+.point{
+  position:absolute;
+  width:34px;
+  height:34px;
+  border-radius:50%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  transform: translate(-50%,-50%);
+  z-index: 20;
+  box-shadow: 0 6px 12px rgba(10,10,10,0.06);
+  font-size:12px;
+  font-weight:700;
+}
+
+/* Visual states */
+.point.future{ background: #e6eef0; color:#6a7d7f; border: 2px solid rgba(0,0,0,0.03)}
+.point.today{
+  background: linear-gradient(180deg,#fff 0%, #ffeecf 100%);
+  border: 2px solid #ffd28a;
+  animation: pulse 1.6s infinite;
+}
+@keyframes pulse{
+  0% { transform: translate(-50%,-50%) scale(1) }
+  50% { transform: translate(-50%,-50%) scale(1.08) }
+  100% { transform: translate(-50%,-50%) scale(1) }
+}
+.point.completed{
+  background: linear-gradient(180deg,#c9f3d8, #6ee78f);
+  color: #0b4b28;
+  position:relative;
+  overflow:visible;
+}
+/* slime overlay for completed */
+.point.completed::after{
+  content:"";
+  position:absolute;
+  left:0; top:0; right:0; bottom:0;
+  border-radius:50%;
+  box-shadow: inset 0 -6px 10px rgba(34,96,40,0.12);
+  background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.7) 0%, rgba(255,255,255,0) 35%);
+  mix-blend-mode: screen;
+  pointer-events:none;
+}
+.point.missed{
+  background: linear-gradient(180deg,#e6cfa8, #b27d43);
+  color:#3b220e;
+}
+
+/* point labels small */
+.point .num{position:absolute; bottom:-18px; left:50%; transform:translateX(-50%); font-size:12px; color:#334;}
+
+.controls{
+  background:var(--card);
+  padding:18px;
+  border-radius:12px;
+  box-shadow: var(--shadow);
+  border:1px solid rgba(0,0,0,0.03);
+  height: var(--map-h);
+  display:flex;
+  flex-direction:column;
+  justify-content:flex-start;
+  gap:12px;
+}
+
+.day-info{font-weight:700}
+.big-btn{
+  padding:14px 16px;
+  font-size:16px;
+  border-radius:12px;
+  background:linear-gradient(180deg,var(--accent), #1a8f62);
+  color:#fff;
+  border:none;
+  cursor:pointer;
+}
+.big-btn[disabled]{opacity:0.55; cursor:not-allowed}
+.status-msg{color:#234; font-size:14px; min-height:24px}
+
+.legend{display:flex;gap:20px;margin-top:18px;align-items:center;flex-wrap:wrap}
+.legend-item{display:flex;gap:8px;align-items:center;font-size:14px;color:#2a3b34}
+.dot{width:16px;height:16px;border-radius:50%;display:inline-block}
+.dot.future{background:#e6eef0}
+.dot.today{background:#ffd28a}
+.dot.completed{background:linear-gradient(180deg,#6ee78f,#2ea86b)}
+.dot.missed{background:#b27d43}
+
+.footer{text-align:center;color:var(--muted);margin:28px 0 60px}
+
+/* responsive */
+@media (max-width:900px){
+  .map-card{grid-template-columns:1fr}
+  .controls{height:auto}
+  .map{height:380px}
+}

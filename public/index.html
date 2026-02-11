@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Snoopy game</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <h1>Snoopy game 🐌</h1>
+    <div id="userPanel" class="user-panel">
+      <span id="userName">Guest</span>
+      <div id="authButtons">
+        <a id="loginBtn" href="/auth/twitter" class="btn">Login via Twitter</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="map-card">
+      <div class="map">
+        <div id="snail" class="snail" title="snail">🐌</div>
+        <!-- points will be injected here -->
+      </div>
+      <div class="controls">
+        <div id="dayInfo" class="day-info">Loading...</div>
+        <button id="checkBtn" class="big-btn" disabled>Loading...</button>
+        <div id="statusMsg" class="status-msg"></div>
+      </div>
+    </section>
+
+  </main>
+
+  
+  <script src="/script.js"></script>
+</body>
+</html>
