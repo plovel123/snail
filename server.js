@@ -23,13 +23,13 @@ const MOVE_DURATION_MS = 4 * 60 * 60 * 1000; // 4 hours
 // sample points positions (percent coordinates for the frontend)
 // You can tune these coordinates to change layout of 7 points on map.
 const POINTS = [
-  { x: 8,  y: 80 },
-  { x: 22, y: 60 },
-  { x: 38, y: 48 },
-  { x: 52, y: 36 },
-  { x: 66, y: 46 },
-  { x: 80, y: 60 },
-  { x: 92, y: 44 }
+  { x: 16, y: 28 },
+  { x: 25, y: 61 },
+  { x: 39, y: 53 },
+  { x: 51.5, y: 35 },
+  { x: 69.3, y: 50 },
+  { x: 80, y: 27 },
+  { x: 93, y: 50 }
 ];
 
 function loadDB(){
