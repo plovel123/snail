@@ -1,38 +1,36 @@
 <!doctype html>
 <html lang="ru">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Snoopy game</title>
-  <link rel="stylesheet" href="/style.css" />
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+  <title>Daily Check-in</title>
+  <link rel="stylesheet" href="/style.css"/>
 </head>
 <body>
-  <header class="topbar">
-    <h1>Snoopy game 🐌</h1>
-    <div id="userPanel" class="user-panel">
-      <span id="userName">Guest</span>
-      <div id="authButtons">
-        <a id="loginBtn" href="/auth/twitter" class="btn">Login via Twitter</a>
-      </div>
+
+  <!-- Полноэкранная карта -->
+  <div id="map" class="map">
+    <img src="/assets/back.png" class="map-bg"/>
+
+    <div id="pointsLayer"></div>
+
+    <img id="snail" src="/assets/snail.png" class="snail"/>
+  </div>
+
+  <!-- HUD поверх карты -->
+  <div class="hud">
+    <div class="user">
+      <span id="userName">Гость</span>
+      <a id="loginBtn" href="/auth/twitter" class="btn">Login</a>
     </div>
-  </header>
 
-  <main class="container">
-    <section class="map-card">
-      <div class="map">
-        <div id="snail" class="snail" title="snail">🐌</div>
-        <!-- points will be injected here -->
-      </div>
-      <div class="controls">
-        <div id="dayInfo" class="day-info">Loading...</div>
-        <button id="checkBtn" class="big-btn" disabled>Loading...</button>
-        <div id="statusMsg" class="status-msg"></div>
-      </div>
-    </section>
+    <div class="panel">
+      <div id="dayInfo"></div>
+      <button id="checkBtn" disabled>Загрузка...</button>
+      <div id="statusMsg"></div>
+    </div>
+  </div>
 
-  </main>
-
-  
   <script src="/script.js"></script>
 </body>
 </html>
