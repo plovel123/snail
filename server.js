@@ -13,8 +13,10 @@ const PORT = process.env.PORT || 3000;
 const SESSION_SECRET = process.env.SESSION_SECRET || 'change_this_session_secret';
 const TWITTER_KEY = process.env.TWITTER_CONSUMER_KEY || '';
 const TWITTER_SECRET = process.env.TWITTER_CONSUMER_SECRET || '';
-const CALLBACK_URL = process.env.TWITTER_CALLBACK_URL || `http://localhost:${PORT}/auth/twitter/callback`;
-
+const APP_BASE_URL = process.env.APP_BASE_URL || '';
+const CALLBACK_URL = process.env.TWITTER_CALLBACK_URL || (APP_BASE_URL ? `${APP_BASE_URL}/auth/twitter/callback` : `http://localhost:${PORT}/auth/twitter/callback`);
+const TRUST_PROXY = process.env.TRUST_PROXY === '1';
+const COOKIE_SECURE = process.env.COOKIE_SECURE === '1';
 // GAME configuration
 const GAME_START = process.env.GAME_START || null; // format "YYYY-MM-DD" , optional: if not set, today is day1
 const TOTAL_DAYS = 7;
@@ -70,7 +72,12 @@ function getCurrentDay() {
 if (!TWITTER_KEY || !TWITTER_SECRET) {
   console.warn('WARNING: TWITTER_CONSUMER_KEY or TWITTER_CONSUMER_SECRET not set. OAuth will not work until you set them.');
 }
-
+if (!process.env.TWITTER_CALLBACK_URL && !APP_BASE_URL) {
+  console.warn('WARNING: APP_BASE_URL or TWITTER_CALLBACK_URL is not set. OAuth callback defaults to localhost and will fail on a public server.');
+}
+if (APP_BASE_URL && /^http:\/\//.test(APP_BASE_URL) && !/localhost|127\.0\.0\.1/.test(APP_BASE_URL)) {
+  console.warn('WARNING: APP_BASE_URL uses http on a public host. Use https in production for secure OAuth and cookies.');
+}
 passport.serializeUser(function(user, done) {
   done(null, user.id);
 });
@@ -119,11 +126,22 @@ passport.use(new TwitterStrategy({
 ));
 
 const app = express();
+if (!process.env.TWITTER_CALLBACK_URL && !APP_BASE_URL) {
+  console.warn('WARNING: APP_BASE_URL or TWITTER_CALLBACK_URL is not set. OAuth callback defaults to localhost and will fail on a public server.');
+}
+if (APP_BASE_URL && /^http:\/\//.test(APP_BASE_URL) && !/localhost|127\.0\.0\.1/.test(APP_BASE_URL)) {
+  console.warn('WARNING: APP_BASE_URL uses http on a public host. Use https in production for secure OAuth and cookies.');
+}
 app.use(bodyParser.json());
 app.use(session({
   secret: SESSION_SECRET,
   resave: false,
-  saveUninitialized: false
+  saveUninitialized: false,
+  cookie: {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: COOKIE_SECURE
+  }
 }));
 app.use(passport.initialize());
 app.use(passport.session());
@@ -263,5 +281,6 @@ app.get('*', (req, res) => {
 
 app.listen(PORT, () => {
   console.log(`Daily Check-in Game running on http://localhost:${PORT}`);
+    console.log(`OAuth callback URL: ${CALLBACK_URL}`);
   if (GAME_START) console.log(`Game start date: ${GAME_START}`);
 });
