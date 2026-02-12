@@ -33,7 +33,7 @@ const assets = {
   fail: '/assets/fail.png'
 };
 
-const SNAIL_ROTATION_OFFSET_DEG = 0;
+const SNAIL_ROTATION_OFFSET_DEG = 90;
 
 const map = document.getElementById('map');
 const mapBg = document.querySelector('.map-bg');
@@ -156,28 +156,7 @@ function createPoints(statuses) {
   positionPoints();
 }
 
-function drawRoute() {
-  const frame = getMapFrame();
-  routeOverlay.setAttribute('viewBox', `0 0 ${map.clientWidth} ${map.clientHeight}`);
 
-  if (fullPathPoints.length < 2) {
-    routePath.setAttribute('d', '');
-    return;
-  }
-
-  const first = pathPointToPixels(fullPathPoints[0], frame);
-  const segments = [`M ${first.x} ${first.y}`];
-
-  for (let i = 0; i < fullPathPoints.length - 1; i += 1) {
-    const to = pathPointToPixels(fullPathPoints[i + 1], frame);
-    const controlPoint = arcControls[i] || lerpPoint(fullPathPoints[i], fullPathPoints[i + 1], 0.5);
-    const control = pathPointToPixels(controlPoint, frame);
-
-    segments.push(`Q ${control.x} ${control.y} ${to.x} ${to.y}`);
-  }
-
-  routePath.setAttribute('d', segments.join(' '));
-}
 
 
 function positionPoints() {
@@ -193,7 +172,7 @@ function positionPoints() {
   startPointEl.style.left = `${startPos.x}px`;
   startPointEl.style.top = `${startPos.y}px`;
 
-  drawRoute();
+
 }
 
 function getSnailState() {
