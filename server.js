@@ -37,15 +37,15 @@ const START_POINT = { x: 3.5, y: 50.6 };
 // Control points for quadratic curves between each adjacent pair of points.
 // Segment i uses POINTS[i] -> POINTS[i + 1] with ARC_CONTROLS[i].
 const ARC_CONTROLS = [
-  { x: 13, y: 49 },
-  { x: 31, y: 66 },
-  { x: 47, y: 44 },
-  { x: 60, y: 32 },
-  { x: 76, y: 38 },
-  { x: 89, y: 31 }
+  { x: 28, y: 27 },
+  { x: 34, y: 88 },
+  { x: 40, y: 15 },
+  { x: 59, y: 103 },
+  { x: 70, y: 15 },
+  { x: 84, y: 60 }
 ];
 
-const START_ARC_CONTROL = { x: 12, y: 25 };
+const START_ARC_CONTROL = { x: 9, y: 55 };
 
 function loadDB(){
   if (!fs.existsSync(DB_PATH)) {

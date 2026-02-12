@@ -11,7 +11,7 @@ const DEFAULT_POINTS = [
 ];
 
 const DEFAULT_ARC_CONTROLS = [
-    { x: 12, y: 25 },
+    { x: 50, y: 50 },
   { x: 13, y: 49 },
   { x: 31, y: 66 },
   { x: 47, y: 44 },
