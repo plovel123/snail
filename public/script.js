@@ -11,7 +11,7 @@ const DEFAULT_POINTS = [
 ];
 
 const DEFAULT_ARC_CONTROLS = [
-    { x: 50, y: 50 },
+    { x: 50, y: 25 },
   { x: 13, y: 49 },
   { x: 31, y: 66 },
   { x: 47, y: 44 },
@@ -33,7 +33,7 @@ const assets = {
   fail: '/assets/fail.png'
 };
 
-const SNAIL_ROTATION_OFFSET_DEG = 90;
+const SNAIL_ROTATION_OFFSET_DEG = 0;
 
 const map = document.getElementById('map');
 const mapBg = document.querySelector('.map-bg');
@@ -171,7 +171,6 @@ function positionPoints() {
     const startPos = pathPointToPixels(startPoint, frame);
   startPointEl.style.left = `${startPos.x}px`;
   startPointEl.style.top = `${startPos.y}px`;
-
 
 }
 
