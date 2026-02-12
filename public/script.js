@@ -1,3 +1,5 @@
+const DEFAULT_START_POINT = { x: 10, y: 22 };
+
 const DEFAULT_POINTS = [
   { x: 16, y: 22 },
   { x: 25, y: 61 },
@@ -9,6 +11,7 @@ const DEFAULT_POINTS = [
 ];
 
 const DEFAULT_ARC_CONTROLS = [
+    { x: 12, y: 25 },
   { x: 13, y: 49 },
   { x: 31, y: 66 },
   { x: 47, y: 44 },
@@ -30,9 +33,14 @@ const assets = {
   fail: '/assets/fail.png'
 };
 
+const SNAIL_ROTATION_OFFSET_DEG = 0;
+
 const map = document.getElementById('map');
 const mapBg = document.querySelector('.map-bg');
 const layer = document.getElementById('pointsLayer');
+const routeOverlay = document.getElementById('routeOverlay');
+const routePath = document.getElementById('routePath');
+const startPointEl = document.getElementById('startPoint');
 const snail = document.getElementById('snail');
 const checkBtn = document.getElementById('checkBtn');
 const dayInfo = document.getElementById('dayInfo');
@@ -42,7 +50,9 @@ const loginBtn = document.getElementById('loginBtn');
 
 let me;
 let state;
+let startPoint = DEFAULT_START_POINT;
 let points = DEFAULT_POINTS;
+let fullPathPoints = [DEFAULT_START_POINT, ...DEFAULT_POINTS];
 let arcControls = DEFAULT_ARC_CONTROLS;
 let frameTimer;
 let buttonTickTimer;
@@ -65,7 +75,7 @@ function shouldLockByOrientation() {
   return isMobileDevice() && !isLandscape();
 }
 function buildGuestStatuses() {
-  return points.map((_, i) => (i === 0 ? 'completed' : i === 1 ? 'today' : 'future'));
+  return points.map((_, i) => (i === 0 ? 'today' : 'future'));
 }
 
 function getMapFrame() {
@@ -119,6 +129,10 @@ function quadraticBezierTangent(a, c, b, t) {
   };
 }
 
+function toPathIndex(pointIndex) {
+  return pointIndex + 1;
+}
+
 function createPoints(statuses) {
   layer.innerHTML = '';
 
@@ -142,6 +156,30 @@ function createPoints(statuses) {
   positionPoints();
 }
 
+function drawRoute() {
+  const frame = getMapFrame();
+  routeOverlay.setAttribute('viewBox', `0 0 ${map.clientWidth} ${map.clientHeight}`);
+
+  if (fullPathPoints.length < 2) {
+    routePath.setAttribute('d', '');
+    return;
+  }
+
+  const first = pathPointToPixels(fullPathPoints[0], frame);
+  const segments = [`M ${first.x} ${first.y}`];
+
+  for (let i = 0; i < fullPathPoints.length - 1; i += 1) {
+    const to = pathPointToPixels(fullPathPoints[i + 1], frame);
+    const controlPoint = arcControls[i] || lerpPoint(fullPathPoints[i], fullPathPoints[i + 1], 0.5);
+    const control = pathPointToPixels(controlPoint, frame);
+
+    segments.push(`Q ${control.x} ${control.y} ${to.x} ${to.y}`);
+  }
+
+  routePath.setAttribute('d', segments.join(' '));
+}
+
+
 function positionPoints() {
   const frame = getMapFrame();
   const nodes = layer.querySelectorAll('.point');
@@ -151,25 +189,39 @@ function positionPoints() {
     node.style.left = `${pos.x}px`;
     node.style.top = `${pos.y}px`;
   });
+    const startPos = pathPointToPixels(startPoint, frame);
+  startPointEl.style.left = `${startPos.x}px`;
+  startPointEl.style.top = `${startPos.y}px`;
+
+  drawRoute();
 }
 
 function getSnailState() {
-  const lastIdx = points.length - 1;
   const activeMove = me?.activeMove;
 
   if (!activeMove) {
-    const currentIdx = Math.min(Math.max(me?.completedCount ?? 0, 0), lastIdx);
-    const at = points[currentIdx];
-    const lookAhead = points[Math.min(lastIdx, currentIdx + 1)] || at;
+    const currentPathIdx = Math.min(Math.max(toPathIndex(me?.completedCount ?? -1), 0), fullPathPoints.length - 1);
+    const at = fullPathPoints[currentPathIdx];
+
+    if (currentPathIdx < fullPathPoints.length - 1) {
+      return {
+        pathPosition: at,
+        angle: angleBetween(at, fullPathPoints[currentPathIdx + 1])
+      };
+    }
+
+    const previous = fullPathPoints[Math.max(0, currentPathIdx - 1)] || at;
     return {
       pathPosition: at,
-      angle: angleBetween(at, lookAhead)
+      angle: angleBetween(previous, at)
     };
   }
 
-  const from = points[activeMove.fromIdx] || points[0];
-  const to = points[activeMove.toIdx] || from;
-  const control = arcControls[activeMove.fromIdx] || lerpPoint(from, to, 0.5);
+  const fromPathIdx = toPathIndex(activeMove.fromIdx);
+  const toPathIdx = toPathIndex(activeMove.toIdx);
+  const from = fullPathPoints[fromPathIdx] || fullPathPoints[0];
+  const to = fullPathPoints[toPathIdx] || from;
+  const control = arcControls[fromPathIdx] || lerpPoint(from, to, 0.5);
   const elapsed = Date.now() - activeMove.startedAt;
   const progress = Math.min(1, Math.max(0, elapsed / state.moveDurationMs));
   const posOnPath = quadraticBezierPoint(from, control, to, progress);
@@ -182,7 +234,7 @@ function getSnailState() {
 }
 
 function moveSnail() {
-  if (!state || points.length === 0) return;
+if (!state || fullPathPoints.length === 0) return;
 
   const frame = getMapFrame();
   const snailState = getSnailState();
@@ -190,14 +242,13 @@ function moveSnail() {
 
   snail.style.left = `${pixelPos.x}px`;
   snail.style.top = `${pixelPos.y}px`;
-  snail.style.transform = `translate(-50%, -50%) rotate(${snailState.angle}deg)`;
+  snail.style.transform = `translate(-50%, -50%) rotate(${snailState.angle + SNAIL_ROTATION_OFFSET_DEG}deg)`;
 }
 
 function updateCheckinButton() {
   if (!state) return;
 
-  const lastIdx = points.length - 1;
-  const isFinished = (me?.completedCount ?? 0) >= lastIdx && !me?.activeMove;
+  const isFinished = (me?.completedCount ?? -1) >= points.length - 1 && !me?.activeMove;
 
   if (!me?.authenticated) {
     checkBtn.disabled = true;
@@ -295,8 +346,8 @@ function waitForBackground() {
 }
 
 function updateProgressHeader() {
-  const nextPoint = Math.min(points.length - 1, (me?.completedCount ?? 0) + 1);
-dayInfo.textContent = `Point ${nextPoint + 1} / ${points.length}`;
+  const nextPoint = Math.min(points.length, Math.max(1, (me?.completedCount ?? -1) + 2));
+  dayInfo.textContent = `Point ${nextPoint} / ${points.length}`;
 }
 
 async function load() {
@@ -305,9 +356,14 @@ async function load() {
 
     state = await fetch(api.state).then((r) => r.json());
     me = await fetch(api.me).then((r) => r.json());
-
+    startPoint = state.startPoint || DEFAULT_START_POINT;
     points = Array.isArray(state.points) && state.points.length ? state.points : DEFAULT_POINTS;
-    arcControls = Array.isArray(state.arcControls) && state.arcControls.length ? state.arcControls : DEFAULT_ARC_CONTROLS;
+    fullPathPoints = [startPoint, ...points];
+
+    const fallbackArcControls = [DEFAULT_ARC_CONTROLS[0], ...DEFAULT_ARC_CONTROLS.slice(1, points.length)];
+    arcControls = Array.isArray(state.arcControls) && state.arcControls.length >= fullPathPoints.length - 1
+      ? state.arcControls
+      : fallbackArcControls;
 
     updateProgressHeader();
 

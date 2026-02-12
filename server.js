@@ -32,6 +32,8 @@ const POINTS = [
   { x: 93, y: 50 }
 ];
 
+const START_POINT = { x: 10, y: 22 };
+
 // Control points for quadratic curves between each adjacent pair of points.
 // Segment i uses POINTS[i] -> POINTS[i + 1] with ARC_CONTROLS[i].
 const ARC_CONTROLS = [
@@ -42,6 +44,8 @@ const ARC_CONTROLS = [
   { x: 76, y: 38 },
   { x: 89, y: 31 }
 ];
+
+const START_ARC_CONTROL = { x: 12, y: 25 };
 
 function loadDB(){
   if (!fs.existsSync(DB_PATH)) {
@@ -62,10 +66,10 @@ function ensureUserShape(user){
     const legacyCompleted = Array.isArray(user.checkins)
       ? user.checkins.filter(Boolean).length
       : 0;
-    user.completedCount = Math.min(maxPointIdx, Math.max(0, legacyCompleted));
+    user.completedCount = Math.min(maxPointIdx, Math.max(-1, legacyCompleted - 1));
   }
 
-  user.completedCount = Math.min(maxPointIdx, Math.max(0, user.completedCount));
+  user.completedCount = Math.min(maxPointIdx, Math.max(-1, user.completedCount));
 
   if (!user.activeMove || typeof user.activeMove !== 'object') {
     user.activeMove = null;
@@ -75,7 +79,7 @@ function ensureUserShape(user){
       && Number.isInteger(toIdx)
       && typeof startedAt === 'number'
       && toIdx === fromIdx + 1
-      && fromIdx >= 0
+      && fromIdx >= -1
       && toIdx <= maxPointIdx
       && fromIdx === user.completedCount;
 
@@ -132,7 +136,7 @@ passport.use(new TwitterStrategy({
         id: uid,
         twitterId: profile.id,
         username: profile.username || (profile.displayName || '').replace(/\s+/g, ''),
-        completedCount: 0,
+        completedCount: -1,
         activeMove: null,
         checkins: Array(TOTAL_DAYS).fill(false),
         movementStarts: Array(TOTAL_DAYS).fill(null)
@@ -186,8 +190,10 @@ app.get('/api/state', (req, res) => {
   res.json({
     totalDays: TOTAL_DAYS,
     totalPoints: POINTS.length,
+    startPoint: START_POINT,
+    startArcControl: START_ARC_CONTROL,
     points: POINTS,
-    arcControls: ARC_CONTROLS,
+    arcControls: [START_ARC_CONTROL, ...ARC_CONTROLS],
     serverTime: Date.now(),
     moveDurationMs: MOVE_DURATION_MS
   });
@@ -204,8 +210,9 @@ app.get('/api/me', (req, res) => {
     return res.status(404).json({ error: 'user not found' });
   }
   user = ensureUserShape(user);
+const maxPointIdx = POINTS.length - 1;
 
-  const targetIdx = user.activeMove ? user.activeMove.toIdx : user.completedCount + 1;
+  const targetIdx = user.activeMove ? user.activeMove.toIdx : Math.min(maxPointIdx, user.completedCount + 1);
   const statuses = [];
   for (let i = 0; i < POINTS.length; i++) {
     if (i <= user.completedCount) {
