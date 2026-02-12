@@ -46,7 +46,24 @@ let points = DEFAULT_POINTS;
 let arcControls = DEFAULT_ARC_CONTROLS;
 let frameTimer;
 let buttonTickTimer;
+let appInitialized = false;
 
+function isTouchDevice() {
+  return navigator.maxTouchPoints > 0 || window.matchMedia('(pointer: coarse)').matches;
+}
+
+function isMobileDevice() {
+  const ua = navigator.userAgent || '';
+  return /Android|iPhone|iPad|iPod|Mobile|Opera Mini|IEMobile/i.test(ua) || isTouchDevice();
+}
+
+function isLandscape() {
+  return window.matchMedia('(orientation: landscape)').matches || window.innerWidth > window.innerHeight;
+}
+
+function shouldLockByOrientation() {
+  return isMobileDevice() && !isLandscape();
+}
 function buildGuestStatuses() {
   return points.map((_, i) => (i === 0 ? 'completed' : i === 1 ? 'today' : 'future'));
 }
@@ -185,24 +202,24 @@ function updateCheckinButton() {
   if (!me?.authenticated) {
     checkBtn.disabled = true;
     checkBtn.dataset.action = 'login';
-    checkBtn.textContent = 'Войдите через Twitter';
-    statusMsg.textContent = 'Для отметки нужен вход.';
+    checkBtn.textContent = 'Sign in with Twitter';
+    statusMsg.textContent = 'Sign in is required to check in.';
     return;
   }
 
   if (isFinished) {
     checkBtn.disabled = true;
     checkBtn.dataset.action = 'done';
-    checkBtn.textContent = 'Маршрут завершён';
-    statusMsg.textContent = 'Отлично! Все точки уже пройдены.';
+    checkBtn.textContent = 'Route completed';
+    statusMsg.textContent = 'Great! All points are already completed.';
     return;
   }
 
   if (!me.activeMove) {
     checkBtn.disabled = false;
     checkBtn.dataset.action = 'start';
-    checkBtn.textContent = 'Начать путь';
-    statusMsg.textContent = 'Можно сразу начинать следующий путь.';
+    checkBtn.textContent = 'Start moving';
+    statusMsg.textContent = 'You can start the next move now.';
     return;
   }
 
@@ -212,8 +229,8 @@ function updateCheckinButton() {
   if (remaining <= 0) {
     checkBtn.disabled = false;
     checkBtn.dataset.action = 'finish';
-    checkBtn.textContent = 'Завершить отметку';
-    statusMsg.textContent = 'Улитка добралась до точки, можно завершить отметку.';
+    checkBtn.textContent = 'Finish check-in';
+    statusMsg.textContent = 'The snail reached the point. You can finish check-in.';
     return;
   }
 
@@ -237,10 +254,20 @@ async function submitCheckin(action) {
   }
 }
 
-function startTicker() {
+function stopTicker() {
   if (frameTimer) {
     cancelAnimationFrame(frameTimer);
+    frameTimer = null;
   }
+
+  if (buttonTickTimer) {
+    clearInterval(buttonTickTimer);
+    buttonTickTimer = null;
+  }
+}
+
+function startTicker() {
+  stopTicker();
 
   const tick = () => {
     moveSnail();
@@ -248,15 +275,11 @@ function startTicker() {
   };
 
   frameTimer = requestAnimationFrame(tick);
-
-  if (buttonTickTimer) {
-    clearInterval(buttonTickTimer);
-  }
-
   buttonTickTimer = setInterval(updateCheckinButton, 1000);
 }
 
 function rerenderTrack() {
+   if (!appInitialized) return;
   positionPoints();
   moveSnail();
 }
@@ -273,7 +296,7 @@ function waitForBackground() {
 
 function updateProgressHeader() {
   const nextPoint = Math.min(points.length - 1, (me?.completedCount ?? 0) + 1);
-  dayInfo.textContent = `Точка ${nextPoint + 1} / ${points.length}`;
+dayInfo.textContent = `Point ${nextPoint + 1} / ${points.length}`;
 }
 
 async function load() {
@@ -289,7 +312,7 @@ async function load() {
     updateProgressHeader();
 
     if (!me.authenticated) {
-      userName.textContent = 'Гость';
+      userName.textContent = 'Guest';
       loginBtn.style.display = 'inline-flex';
       createPoints(buildGuestStatuses());
       rerenderTrack();
@@ -307,34 +330,69 @@ async function load() {
     startTicker();
   } catch (error) {
     checkBtn.disabled = true;
-    checkBtn.textContent = 'Ошибка загрузки';
-    statusMsg.textContent = `Не удалось загрузить данные: ${error.message}`;
+     checkBtn.textContent = 'Loading error';
+    statusMsg.textContent = `Failed to load data: ${error.message}`;
   }
 }
 
-checkBtn.addEventListener('click', async () => {
-  if (checkBtn.disabled || !me?.authenticated) return;
+function handleCheckinClick() {
+  return async () => {
+    if (checkBtn.disabled || !me?.authenticated) return;
 
-  const action = checkBtn.dataset.action;
-  if (action !== 'start' && action !== 'finish') return;
+    const action = checkBtn.dataset.action;
+    if (action !== 'start' && action !== 'finish') return;
 
-  checkBtn.disabled = true;
-  const originalLabel = checkBtn.textContent;
-  checkBtn.textContent = 'Сохраняем...';
+    checkBtn.disabled = true;
+    const originalLabel = checkBtn.textContent;
+    checkBtn.textContent = 'Saving...';
 
-  try {
-    await submitCheckin(action);
-    statusMsg.textContent = action === 'start'
-      ? 'Старт сохранён. Улитка уже ползёт к следующей точке.'
-      : 'Готово! Можно сразу запускать следующий путь.';
-    await load();
-  } catch (error) {
-    checkBtn.textContent = originalLabel;
-    statusMsg.textContent = `Ошибка: ${error.message}`;
-    updateCheckinButton();
+    try {
+      await submitCheckin(action);
+      statusMsg.textContent = action === 'start'
+        ? 'Start saved. The snail is already moving to the next point.'
+        : 'Done! You can immediately start the next move.';
+      await load();
+    } catch (error) {
+      checkBtn.textContent = originalLabel;
+      statusMsg.textContent = `Error: ${error.message}`;
+      updateCheckinButton();
+    }
+  };
+}
+
+const onCheckinClick = handleCheckinClick();
+
+function setOrientationGateState(isLocked) {
+  document.body.classList.toggle('mobile-portrait-lock', isLocked);
+}
+
+function activateAppIfNeeded() {
+  if (!appInitialized) {
+    appInitialized = true;
+    load();
   }
+}
+
+function handleOrientation() {
+  const locked = shouldLockByOrientation();
+  setOrientationGateState(locked);
+
+  if (locked) {
+    stopTicker();
+    return;
+  }
+
+  activateAppIfNeeded();
+  rerenderTrack();
+  if (appInitialized && !buttonTickTimer) {
+    startTicker();
+  }
+}
+
+checkBtn.addEventListener('click', onCheckinClick);
+window.addEventListener('resize', () => {
+  handleOrientation();
 });
+window.addEventListener('orientationchange', handleOrientation);
 
-window.addEventListener('resize', rerenderTrack);
-
-load();
+handleOrientation();
