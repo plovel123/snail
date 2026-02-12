@@ -313,15 +313,7 @@ function rerenderTrack() {
   moveSnail();
 }
 
-function waitForBackground() {
-  if (mapBg.complete && mapBg.naturalWidth > 0) {
-    return Promise.resolve();
-  }
 
-  return new Promise((resolve) => {
-    mapBg.addEventListener('load', resolve, { once: true });
-  });
-}
 
 function updateProgressHeader() {
   const nextPoint = Math.min(points.length, Math.max(1, (me?.completedCount ?? -1) + 2));
@@ -330,10 +322,13 @@ function updateProgressHeader() {
 
 async function load() {
   try {
-    await waitForBackground();
+    const [statePayload, mePayload] = await Promise.all([
+      fetch(api.state).then((r) => r.json()),
+      fetch(api.me).then((r) => r.json())
+    ]);
 
-    state = await fetch(api.state).then((r) => r.json());
-    me = await fetch(api.me).then((r) => r.json());
+    state = statePayload;
+    me = mePayload;
     startPoint = state.startPoint || DEFAULT_START_POINT;
     points = Array.isArray(state.points) && state.points.length ? state.points : DEFAULT_POINTS;
     fullPathPoints = [startPoint, ...points];

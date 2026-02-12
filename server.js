@@ -16,7 +16,8 @@ const APP_BASE_URL = process.env.APP_BASE_URL || '';
 const CALLBACK_URL = process.env.TWITTER_CALLBACK_URL || (APP_BASE_URL ? `${APP_BASE_URL}/auth/twitter/callback` : `http://localhost:${PORT}/auth/twitter/callback`);
 const TRUST_PROXY = process.env.TRUST_PROXY === '1';
 const COOKIE_SECURE = process.env.COOKIE_SECURE === '1';
-// GAME configuration
+const COOKIE_MAX_AGE_MS = 1000 * 60 * 60 * 24 * 30; // 30 days
+const USE_SECURE_COOKIE = COOKIE_SECURE || /^https:\/\//.test(APP_BASE_URL);
 const TOTAL_DAYS = 7;
 const MOVE_DURATION_MS = 60*1000;//12 * 60 * 60 * 1000; // 12 hours
 
@@ -154,6 +155,7 @@ passport.use(new TwitterStrategy({
 ));
 
 const app = express();
+app.set('trust proxy', TRUST_PROXY || USE_SECURE_COOKIE);
 if (!process.env.TWITTER_CALLBACK_URL && !APP_BASE_URL) {
   console.warn('WARNING: APP_BASE_URL or TWITTER_CALLBACK_URL is not set. OAuth callback defaults to localhost and will fail on a public server.');
 }
@@ -168,13 +170,25 @@ app.use(session({
   cookie: {
     httpOnly: true,
     sameSite: 'lax',
-    secure: COOKIE_SECURE
+        secure: USE_SECURE_COOKIE ? 'auto' : false,
+    maxAge: COOKIE_MAX_AGE_MS
   }
 }));
 app.use(passport.initialize());
 app.use(passport.session());
 
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'public'), {
+  etag: true,
+  maxAge: '1d',
+  setHeaders(res, filePath) {
+    if (path.basename(filePath) === 'index.html') {
+      res.setHeader('Cache-Control', 'no-cache');
+      return;
+    }
+
+    res.setHeader('Cache-Control', 'public, max-age=86400, immutable');
+  }
+}));
 
 // Auth routes
 app.get('/auth/twitter', passport.authenticate('twitter'));
