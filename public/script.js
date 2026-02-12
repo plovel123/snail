@@ -33,7 +33,7 @@ const assets = {
   fail: '/assets/fail.png'
 };
 
-const SNAIL_ROTATION_OFFSET_DEG = 0;
+const SNAIL_ROTATION_OFFSET_DEG = 90;
 
 const map = document.getElementById('map');
 const mapBg = document.querySelector('.map-bg');
