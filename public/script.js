@@ -1,4 +1,4 @@
-const DEFAULT_START_POINT = { x: 10, y: 22 };
+const DEFAULT_START_POINT = { x: 3.5, y: 50.6 };
 
 const DEFAULT_POINTS = [
   { x: 16, y: 22 },

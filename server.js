@@ -32,7 +32,7 @@ const POINTS = [
   { x: 93, y: 50 }
 ];
 
-const START_POINT = { x: 10, y: 22 };
+const START_POINT = { x: 3.5, y: 50.6 };
 
 // Control points for quadratic curves between each adjacent pair of points.
 // Segment i uses POINTS[i] -> POINTS[i + 1] with ARC_CONTROLS[i].
