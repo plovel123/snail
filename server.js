@@ -18,7 +18,7 @@ const TRUST_PROXY = process.env.TRUST_PROXY === '1';
 const COOKIE_SECURE = process.env.COOKIE_SECURE === '1';
 // GAME configuration
 const TOTAL_DAYS = 7;
-const MOVE_DURATION_MS = 12 * 60 * 60 * 1000; // 12 hours
+const MOVE_DURATION_MS = 60*1000;//12 * 60 * 60 * 1000; // 12 hours
 
 // sample points positions (percent coordinates for the frontend)
 // You can tune these coordinates to change layout of 7 points on map.
