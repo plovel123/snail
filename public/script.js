@@ -237,8 +237,8 @@ function updateCheckinButton() {
   const mins = Math.ceil(remaining / 60000);
   checkBtn.disabled = true;
   checkBtn.dataset.action = 'wait';
-  checkBtn.textContent = `В пути ещё ${mins} мин`;
-  statusMsg.textContent = 'Движение начато. Кнопка станет активной позже.';
+  checkBtn.textContent = `Another ${mins} min on the way`;
+  statusMsg.textContent = 'Moving....';
 }
 
 async function submitCheckin(action) {
