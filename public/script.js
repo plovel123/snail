@@ -1,24 +1,12 @@
 const DEFAULT_POINTS = [
-  { x: 10, y: 84 },
-  { x: 22, y: 66 },
-  { x: 35, y: 54 },
-  { x: 49, y: 46 },
-  { x: 63, y: 53 },
-  { x: 78, y: 64 },
-  { x: 90, y: 52 }
+  { x: 16, y: 22 },
+  { x: 25, y: 61 },
+  { x: 39, y: 53 },
+  { x: 51.5, y: 35 },
+  { x: 69.3, y: 50 },
+  { x: 80, y: 22 },
+  { x: 93, y: 50 }
 ];
-
-// One control point per segment: 0->1, 1->2, ..., 5->6.
-// Tweak these percentages to bend the snail path into better arcs for your map.
-const DEFAULT_ARC_CONTROLS = [
-  { x: 16, y: 74 },
-  { x: 28, y: 58 },
-  { x: 42, y: 47 },
-  { x: 56, y: 47 },
-  { x: 70, y: 58 },
-  { x: 84, y: 59 }
-];
-
 const api = {
   state: '/api/state',
   me: '/api/me',
@@ -45,22 +33,20 @@ const loginBtn = document.getElementById('loginBtn');
 let me;
 let state;
 let points = DEFAULT_POINTS;
-let arcControls = DEFAULT_ARC_CONTROLS;
 let frameTimer;
 let buttonTickTimer;
 
-function clamp(value, min, max) {
-  return Math.min(Math.max(value, min), max);
-}
-
 function currentIdx() {
-  const baseDay = me?.authenticated ? me.currentDay : state?.currentDay;
-  const day = baseDay || 1;
-  return clamp(day - 1, 0, points.length - 1);
+  return Math.min(Math.max((state?.currentDay || 1) - 1, 0), points.length - 1);
 }
 
 function buildGuestStatuses() {
-  return points.map((_, i) => (i === 0 ? 'today' : 'future'));
+  return points.map((_, i) => {
+    const day = i + 1;
+    if (day < state.currentDay) return 'missed';
+    if (day === state.currentDay) return 'today';
+    return 'future';
+  });
 }
 
 function getMapFrame() {
@@ -88,6 +74,17 @@ function pathPointToPixels(point, frame = getMapFrame()) {
   };
 }
 
+function lerpPoint(a, b, t) {
+  return {
+    x: a.x + (b.x - a.x) * t,
+    y: a.y + (b.y - a.y) * t
+  };
+}
+
+function pointDistance(a, b) {
+  return Math.hypot(b.x - a.x, b.y - a.y);
+}
+
 function angleBetween(a, b) {
   return Math.atan2(b.y - a.y, b.x - a.x) * 180 / Math.PI;
 }
@@ -107,6 +104,7 @@ function createPoints(statuses) {
     else img.src = assets.base;
 
     img.alt = `day-${i + 1}-${st}`;
+
     el.appendChild(img);
     layer.appendChild(el);
   });
@@ -125,87 +123,30 @@ function positionPoints() {
   });
 }
 
-function getLastCompletedIdx() {
-  if (!me?.authenticated || !Array.isArray(me.checkins)) return 0;
-  for (let i = me.checkins.length - 1; i >= 0; i -= 1) {
-    if (me.checkins[i]) return i;
-  }
-  return 0;
-}
-
-function quadraticBezier(a, c, b, t) {
-  const oneMinus = 1 - t;
-  return {
-    x: oneMinus * oneMinus * a.x + 2 * oneMinus * t * c.x + t * t * b.x,
-    y: oneMinus * oneMinus * a.y + 2 * oneMinus * t * c.y + t * t * b.y
-  };
-}
-
-function quadraticBezierTangent(a, c, b, t) {
-  return {
-    x: 2 * (1 - t) * (c.x - a.x) + 2 * t * (b.x - c.x),
-    y: 2 * (1 - t) * (c.y - a.y) + 2 * t * (b.y - c.y)
-  };
-}
-
-function getSegmentControl(fromIdx, toIdx) {
-  const segmentIdx = Math.min(fromIdx, toIdx);
-  return arcControls[segmentIdx] || {
-    x: (points[fromIdx].x + points[toIdx].x) / 2,
-    y: (points[fromIdx].y + points[toIdx].y) / 2
-  };
-}
-
 function getSnailState() {
-  if (!me?.authenticated) {
-    const idle = points[0];
-    return {
-      pathPosition: idle,
-      angle: 0
-    };
+  const idx = currentIdx();
+  const prevIdx = Math.max(0, idx - 1);
+
+  const from = points[prevIdx];
+  const to = points[idx] || from;
+  const started = me?.movementStarts?.[idx];
+
+  let progress = 0;
+  if (started) {
+    progress = Math.min(1, (Date.now() - started) / state.moveDurationMs);
   }
 
-  const targetIdx = currentIdx();
-  const allDone = me.checkins?.every(Boolean);
-  const lastCompletedIdx = getLastCompletedIdx();
+  const posOnPath = lerpPoint(from, to, progress);
 
-  if (allDone) {
-    const lastPoint = points[points.length - 1];
-    return {
-      pathPosition: lastPoint,
-      angle: 0
-    };
+  let directionTarget = to;
+  if (pointDistance(from, to) < 0.1) {
+    const next = points[Math.min(points.length - 1, idx + 1)] || to;
+    directionTarget = next;
   }
-
-  const startIdx = Math.max(0, Math.min(lastCompletedIdx, targetIdx));
-  const fromIdx = me.checkins?.[targetIdx] ? targetIdx : startIdx;
-  const toIdx = targetIdx;
-
-  const from = points[fromIdx];
-  const to = points[toIdx] || from;
-
-  const startedAt = me.movementStarts?.[toIdx];
-  if (!startedAt) {
-    const idlePoint = me.checkins?.[toIdx] ? to : from;
-    const nextDirection = points[Math.min(points.length - 1, toIdx + 1)] || idlePoint;
-    return {
-      pathPosition: idlePoint,
-      angle: angleBetween(idlePoint, nextDirection)
-    };
-  }
-
-  const progress = clamp((Date.now() - startedAt) / state.moveDurationMs, 0, 1);
-  const control = getSegmentControl(fromIdx, toIdx);
-  const posOnArc = quadraticBezier(from, control, to, progress);
-  const tangent = quadraticBezierTangent(from, control, to, progress);
-  const heading = {
-    x: posOnArc.x + tangent.x,
-    y: posOnArc.y + tangent.y
-  };
 
   return {
-    pathPosition: posOnArc,
-    angle: angleBetween(posOnArc, heading)
+    pathPosition: posOnPath,
+    angle: angleBetween(from, directionTarget)
   };
 }
 
@@ -224,6 +165,8 @@ function moveSnail() {
 function updateCheckinButton() {
   if (!state) return;
 
+  const idx = currentIdx();
+
   if (!me?.authenticated) {
     checkBtn.disabled = true;
     checkBtn.dataset.action = 'login';
@@ -232,30 +175,19 @@ function updateCheckinButton() {
     return;
   }
 
-  const idx = currentIdx();
-  const allDone = me.checkins?.every(Boolean);
-
-  if (allDone) {
-    checkBtn.disabled = true;
-    checkBtn.dataset.action = 'done';
-    checkBtn.textContent = 'Маршрут пройден';
-    statusMsg.textContent = 'Вы завершили все точки.';
-    return;
-  }
-
   if (me.checkins?.[idx]) {
     checkBtn.disabled = true;
     checkBtn.dataset.action = 'done';
-    checkBtn.textContent = 'Точка завершена';
-    statusMsg.textContent = 'Обновляем прогресс...';
+    checkBtn.textContent = 'Сегодня отмечено';
+    statusMsg.textContent = 'Отлично, отметка за сегодня уже есть.';
     return;
   }
 
   if (!me.movementStarts?.[idx]) {
     checkBtn.disabled = false;
     checkBtn.dataset.action = 'start';
-    checkBtn.textContent = 'Начать путь';
-    statusMsg.textContent = 'Можно сразу начать путь к следующей точке.';
+    checkBtn.textContent = 'Отметиться';
+    statusMsg.textContent = 'Нажмите, чтобы начать путь на сегодня.';
     return;
   }
 
@@ -265,17 +197,16 @@ function updateCheckinButton() {
   if (remaining <= 0) {
     checkBtn.disabled = false;
     checkBtn.dataset.action = 'finish';
-    checkBtn.textContent = 'Завершить точку';
-    statusMsg.textContent = 'Путь завершён, можно засчитать точку.';
+    checkBtn.textContent = 'Завершить отметку';
+    statusMsg.textContent = 'Можно завершить сегодняшнюю отметку.';
     return;
   }
 
-  const hours = Math.floor(remaining / 3600000);
-  const mins = Math.ceil((remaining % 3600000) / 60000);
+  const mins = Math.ceil(remaining / 60000);
   checkBtn.disabled = true;
   checkBtn.dataset.action = 'wait';
-  checkBtn.textContent = `Осталось ${hours}ч ${mins}м`;
-  statusMsg.textContent = 'Улитка в пути. Дождитесь завершения таймера.';
+  checkBtn.textContent = `Осталось ${mins} мин`;
+  statusMsg.textContent = 'Движение начато. Кнопка станет активной позже.';
 }
 
 async function submitCheckin(action) {
@@ -292,7 +223,9 @@ async function submitCheckin(action) {
 }
 
 function startTicker() {
-  if (frameTimer) cancelAnimationFrame(frameTimer);
+  if (frameTimer) {
+    cancelAnimationFrame(frameTimer);
+  }
 
   const tick = () => {
     moveSnail();
@@ -301,7 +234,10 @@ function startTicker() {
 
   frameTimer = requestAnimationFrame(tick);
 
-  if (buttonTickTimer) clearInterval(buttonTickTimer);
+  if (buttonTickTimer) {
+    clearInterval(buttonTickTimer);
+  }
+
   buttonTickTimer = setInterval(updateCheckinButton, 1000);
 }
 
@@ -328,10 +264,8 @@ async function load() {
     me = await fetch(api.me).then((r) => r.json());
 
     points = Array.isArray(state.points) && state.points.length ? state.points : DEFAULT_POINTS;
-    arcControls = Array.isArray(state.arcControls) && state.arcControls.length ? state.arcControls : DEFAULT_ARC_CONTROLS;
 
-    const uiDay = me?.authenticated ? me.currentDay : state.currentDay;
-    dayInfo.textContent = `День ${uiDay} / ${state.totalDays}`;
+    dayInfo.textContent = `День ${state.currentDay} / ${state.totalDays}`;
 
     if (!me.authenticated) {
       userName.textContent = 'Гость';
@@ -370,8 +304,8 @@ checkBtn.addEventListener('click', async () => {
   try {
     await submitCheckin(action);
     statusMsg.textContent = action === 'start'
-      ? 'Путь начат. Улитка поползла к следующей точке.'
-      : 'Точка завершена. Можно сразу начинать следующую.';
+      ? 'Старт сохранён. Ожидайте завершения времени движения.'
+      : 'Готово! Отметка успешно завершена.';
     await load();
   } catch (error) {
     checkBtn.textContent = originalLabel;
