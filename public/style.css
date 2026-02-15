@@ -169,8 +169,8 @@ body.mobile-portrait-lock .survey-open-btn{
 
 .rules-card{
   position:relative;
-  width:min(94vw, 720px);
-  max-height:88vh;
+  width:min(94vw, 88vh, 720px);
+  aspect-ratio:1 / 1;
   border-radius:18px;
   overflow:hidden;
   box-shadow:0 18px 44px rgba(0, 0, 0, 0.4);
@@ -179,7 +179,9 @@ body.mobile-portrait-lock .survey-open-btn{
 .rules-image{
   width:100%;
   height:auto;
+   height:100%;
   display:block;
+  object-fit:cover;
 }
 
 .rules-content{
