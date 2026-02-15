@@ -20,7 +20,7 @@
     <div id="pointsLayer"></div>
 
     <div id="startPoint" class="point start-point">
-      <img src="/assets/base.png" alt="start-point"/>
+      <img src="/assets/Start.png" alt="start-point"/>
     </div>
 
     <img id="snail" src="/assets/snail.png" class="snail"/>
@@ -29,7 +29,7 @@
   <div class="hud">
     <div class="user">
       <span id="userName">Guest</span>
-      <a id="loginBtn" href="/auth/twitter" class="btn">Login</a>
+      <button id="logoutBtn" class="btn logout-btn" type="button">Выход</button>
     </div>
 
     <div class="panel">
@@ -38,7 +38,23 @@
       <div id="statusMsg"></div>
     </div>
   </div>
+<div id="rulesOverlay" class="rules-overlay" aria-live="polite" role="dialog" aria-modal="true">
+    <div class="rules-card">
+      <img src="/assets/load.png" alt="Game rules" class="rules-image"/>
 
+      <div class="rules-content">
+        <h1>Правила маршрута</h1>
+        <ul>
+          <li>Авторизуйтесь через Twitter</li>
+          <li>Отмечайтесь каждый день</li>
+          <li>Не пропускайте чекпоинты</li>
+          <li>Пройдите весь маршрут за 7 дней</li>
+        </ul>
+      </div>
+
+      <a id="overlayLoginBtn" href="/auth/twitter" class="btn auth-btn">Авторизация</a>
+    </div>
+  </div>
   <script src="/script.js"></script>
 </body>
 </html>

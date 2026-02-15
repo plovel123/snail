@@ -47,6 +47,9 @@ const dayInfo = document.getElementById('dayInfo');
 const statusMsg = document.getElementById('statusMsg');
 const userName = document.getElementById('userName');
 const loginBtn = document.getElementById('loginBtn');
+const logoutBtn = document.getElementById('logoutBtn');
+const rulesOverlay = document.getElementById('rulesOverlay');
+const overlayLoginBtn = document.getElementById('overlayLoginBtn');
 
 let me;
 let state;
@@ -57,7 +60,12 @@ let arcControls = DEFAULT_ARC_CONTROLS;
 let frameTimer;
 let buttonTickTimer;
 let appInitialized = false;
-
+function setAuthState(isAuthenticated) {
+  document.body.classList.toggle('unauthenticated', !isAuthenticated);
+  rulesOverlay.setAttribute('aria-hidden', isAuthenticated ? 'true' : 'false');
+  overlayLoginBtn.style.display = isAuthenticated ? 'none' : 'inline-flex';
+  logoutBtn.style.display = isAuthenticated ? 'inline-flex' : 'none';
+}
 function isTouchDevice() {
   return navigator.maxTouchPoints > 0 || window.matchMedia('(pointer: coarse)').matches;
 }
@@ -231,8 +239,8 @@ function updateCheckinButton() {
   if (!me?.authenticated) {
     checkBtn.disabled = true;
     checkBtn.dataset.action = 'login';
-    checkBtn.textContent = 'Sign in with Twitter';
-    statusMsg.textContent = 'Sign in is required to check in.';
+   checkBtn.textContent = 'Login to start';
+    statusMsg.textContent = 'Login via twitter';
     return;
   }
 
@@ -341,17 +349,17 @@ async function load() {
     updateProgressHeader();
 
     if (!me.authenticated) {
+       setAuthState(false);
       userName.textContent = 'Guest';
-      loginBtn.style.display = 'inline-flex';
       createPoints(buildGuestStatuses());
       rerenderTrack();
       updateCheckinButton();
       startTicker();
       return;
     }
-
+    setAuthState(true);
     userName.textContent = `@${me.username}`;
-    loginBtn.style.display = 'none';
+    
 
     createPoints(me.statuses);
     rerenderTrack();
@@ -389,7 +397,27 @@ function handleCheckinClick() {
   };
 }
 
+function handleLogoutClick() {
+  return async () => {
+    if (!me?.authenticated) return;
+
+    logoutBtn.disabled = true;
+    try {
+      await fetch(api.logout, { method: 'POST' });
+      me = { authenticated: false };
+      setAuthState(false);
+      await load();
+    } catch (error) {
+      statusMsg.textContent = `Logout error: ${error.message}`;
+    } finally {
+      logoutBtn.disabled = false;
+    }
+  };
+}
+
 const onCheckinClick = handleCheckinClick();
+const onLogoutClick = handleLogoutClick();
+
 
 function setOrientationGateState(isLocked) {
   document.body.classList.toggle('mobile-portrait-lock', isLocked);
@@ -419,6 +447,7 @@ function handleOrientation() {
 }
 
 checkBtn.addEventListener('click', onCheckinClick);
+logoutBtn.addEventListener('click', onLogoutClick);
 window.addEventListener('resize', () => {
   handleOrientation();
 });
