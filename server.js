@@ -8,6 +8,7 @@ const TwitterStrategy = require('passport-twitter').Strategy;
 const bodyParser = require('body-parser');
 
 const DB_PATH = path.join(__dirname, 'db.json');
+const ANSWERS_PATH = path.join(__dirname, 'answers.json');
 const PORT = process.env.PORT || 3000;
 const SESSION_SECRET = process.env.SESSION_SECRET || 'change_this_session_secret';
 const TWITTER_KEY = process.env.TWITTER_CONSUMER_KEY || '';
@@ -58,6 +59,18 @@ function loadDB(){
 function saveDB(db){
   fs.writeFileSync(DB_PATH, JSON.stringify(db, null, 2));
 }
+function loadAnswersDB() {
+  if (!fs.existsSync(ANSWERS_PATH)) {
+    fs.writeFileSync(ANSWERS_PATH, JSON.stringify({ users: {} }, null, 2));
+  }
+  const raw = fs.readFileSync(ANSWERS_PATH);
+  return JSON.parse(raw);
+}
+
+function saveAnswersDB(db) {
+  fs.writeFileSync(ANSWERS_PATH, JSON.stringify(db, null, 2));
+}
+
 
 function ensureUserShape(user){
   const maxPointIdx = POINTS.length - 1;
@@ -225,7 +238,8 @@ app.get('/api/me', (req, res) => {
   }
   user = ensureUserShape(user);
 const maxPointIdx = POINTS.length - 1;
-
+  const answersDB = loadAnswersDB();
+  const answersSaved = Boolean(answersDB.users?.[user.id]);
   const targetIdx = user.activeMove ? user.activeMove.toIdx : Math.min(maxPointIdx, user.completedCount + 1);
   const statuses = [];
   for (let i = 0; i < POINTS.length; i++) {
@@ -246,7 +260,8 @@ const maxPointIdx = POINTS.length - 1;
     completedCount: user.completedCount,
     activeMove: user.activeMove,
     statuses,
-    moveDurationMs: MOVE_DURATION_MS
+    moveDurationMs: MOVE_DURATION_MS,
+    answersSaved
   });
 });
 
@@ -302,7 +317,43 @@ app.post('/api/checkin', (req, res) => {
     return res.json({ ok: true, completedCount: user.completedCount });
   }
 });
+app.post('/api/answers', (req, res) => {
+  if (!req.isAuthenticated()) return res.status(401).json({ error: 'unauthenticated' });
 
+  const { user } = getUserFromReq(req);
+  if (!user) return res.status(404).json({ error: 'user not found' });
+
+  const isFinished = user.completedCount >= POINTS.length - 1 && !user.activeMove;
+  if (!isFinished) {
+    return res.status(400).json({ error: 'route_not_completed' });
+  }
+
+  const { answers } = req.body;
+  if (!Array.isArray(answers) || answers.length !== 6) {
+    return res.status(400).json({ error: 'answers_must_contain_6_items' });
+  }
+
+  const normalizedAnswers = answers.map((item) => String(item || '').trim());
+  if (normalizedAnswers.some((item) => !item)) {
+    return res.status(400).json({ error: 'empty_answers_not_allowed' });
+  }
+
+  const answersDB = loadAnswersDB();
+  if (answersDB.users?.[user.id]) {
+    return res.status(400).json({ error: 'answers_already_saved' });
+  }
+
+  answersDB.users = answersDB.users || {};
+  answersDB.users[user.id] = {
+    userId: user.id,
+    username: user.username,
+    savedAt: Date.now(),
+    answers: normalizedAnswers
+  };
+
+  saveAnswersDB(answersDB);
+  res.json({ ok: true });
+});
 // Logout
 app.post('/auth/logout', (req, res) => {
   req.logout(() => {});

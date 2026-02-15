@@ -7,6 +7,9 @@
   <link rel="stylesheet" href="/style.css"/>
 </head>
 <body>
+  <div id="loadingOverlay" class="loading-overlay" aria-live="polite">
+    <p>Loading...</p>
+  </div>
 
   <div id="orientationGate" class="orientation-gate" aria-live="polite">
     <p>Please rotate your device to landscape mode to continue.</p>
@@ -29,7 +32,7 @@
   <div class="hud">
     <div class="user">
       <span id="userName">Guest</span>
-      <button id="logoutBtn" class="btn logout-btn" type="button">Выход</button>
+      <button id="logoutBtn" class="btn logout-btn" type="button">Logout</button>
     </div>
 
     <div class="panel">
@@ -43,18 +46,36 @@
       <img src="/assets/load.png" alt="Game rules" class="rules-image"/>
 
       <div class="rules-content">
-        <h1>Правила маршрута</h1>
+        <h1>Route Rules</h1>
         <ul>
-          <li>Авторизуйтесь через Twitter</li>
-          <li>Отмечайтесь каждый день</li>
-          <li>Не пропускайте чекпоинты</li>
-          <li>Пройдите весь маршрут за 7 дней</li>
+          <li>Sign in via Twitter</li>
+          <li>Check in every day</li>
+          <li>Do not miss checkpoints</li>
+          <li>Complete the route in 7 days</li>
         </ul>
       </div>
 
-      <a id="overlayLoginBtn" href="/auth/twitter" class="btn auth-btn">Авторизация</a>
+      <a id="overlayLoginBtn" href="/auth/twitter" class="btn auth-btn">Authorize</a>
+    </div>
+  </div>
+
+  <button id="openSurveyBtn" class="btn survey-open-btn" type="button" disabled>Open survey</button>
+
+  <div id="surveyModal" class="survey-modal" aria-hidden="true" role="dialog" aria-modal="true">
+    <div class="survey-card">
+      <button id="surveyCloseBtn" class="survey-close" type="button" aria-label="Close">×</button>
+      <p id="surveyCounter" class="survey-counter"></p>
+      <h2 id="surveyQuestion" class="survey-question"></h2>
+      <textarea id="surveyAnswer" class="survey-answer" rows="4" placeholder="Type your answer..."></textarea>
+      <p id="surveyError" class="survey-error"></p>
+      <div class="survey-nav">
+        <button id="surveyPrevBtn" class="btn survey-nav-btn" type="button">← Previous</button>
+        <button id="surveyNextBtn" class="btn survey-nav-btn" type="button">Next →</button>
+      </div>
     </div>
   </div>
   <script src="/script.js"></script>
 </body>
 </html>
+public/script.js
+public/script.js
